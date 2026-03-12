@@ -8,7 +8,7 @@ Most seed backup methods store your words in some form — on paper, metal, spli
 
 SeedRunner takes a different approach:
 
-SeedRunner shuffles the BIP-39 word list using a SHA-256 hash of your password — assigning every word a unique number. You write those numbers on physical paper. Without both your password **and** your written numbers, 
+SeedRunner shuffles the BIP-39 word list using a SHA-256 hash via password — assigning every word a unique number. You write those numbers on physical paper. Without both your password **and** your written numbers, 
 the seed cannot be reconstructed.
 
 ```
