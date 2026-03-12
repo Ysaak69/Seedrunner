@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SeedRunner — 2-Factor Seed Backup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0a0a0a;
+    --bg2:      #111111;
+    --bg3:      #181818;
+    --card:     #141414;
+    --border:   #242424;
+    --orange:   #ff4500;
+    --orange2:  #ff6534;
+    --orangedim:#7a2000;
+    --text:     #e8e6e3;
+    --muted:    #818384;
+    --mid:      #b0adaa;
+    --green:    #46d160;
+    --mono:     'IBM Plex Mono', monospace;
+    --sans:     'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: 0.4;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 40px; height: 60px;
+    background: rgba(10,10,10,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--sans); font-weight: 800; font-size: 17px; color: var(--text);
+    text-decoration: none;
+  }
+
+  .nav-logo-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--orange);
+    box-shadow: 0 0 12px var(--orange);
+  }
+
+  .nav-links { display: flex; gap: 32px; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none;
+    font-size: 13px; font-family: var(--mono);
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+
+  .nav-cta {
+    background: var(--orange); color: #fff;
+    padding: 8px 20px; border-radius: 4px;
+    font-size: 13px; font-weight: 700; font-family: var(--mono);
+    text-decoration: none;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .nav-cta:hover { background: var(--orange2); transform: translateY(-1px); }
+
+  /* ── SECTIONS ── */
+  section { position: relative; z-index: 1; }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 120px 24px 80px;
+    overflow: hidden;
+  }
+
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 60px 60px;
+    opacity: 0.3;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black, transparent);
+  }
+
+  .hero-glow {
+    position: absolute; top: 30%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px; height: 600px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,69,0,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,69,0,0.1); border: 1px solid var(--orangedim);
+    color: var(--orange2); font-family: var(--mono); font-size: 11px;
+    padding: 6px 14px; border-radius: 100px;
+    margin-bottom: 32px;
+    animation: fadeup 0.6s ease both;
+  }
+
+  .hero-badge::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--orange);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  h1 {
+    font-size: clamp(42px, 7vw, 88px);
+    font-weight: 800; line-height: 1.0;
+    letter-spacing: -0.03em;
+    animation: fadeup 0.6s 0.1s ease both;
+  }
+
+  h1 span { color: var(--orange); }
+
+  .hero-sub {
+    margin-top: 24px;
+    font-size: clamp(16px, 2vw, 20px);
+    color: var(--mid); max-width: 560px;
+    font-family: var(--mono); font-weight: 400; line-height: 1.7;
+    animation: fadeup 0.6s 0.2s ease both;
+  }
+
+  .hero-buttons {
+    display: flex; gap: 16px; margin-top: 44px; flex-wrap: wrap; justify-content: center;
+    animation: fadeup 0.6s 0.3s ease both;
+  }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--orange); color: #fff;
+    padding: 14px 28px; border-radius: 6px;
+    font-family: var(--mono); font-size: 14px; font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 0 0 0 rgba(255,69,0,0.4);
+  }
+  .btn-primary:hover {
+    background: var(--orange2);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(255,69,0,0.25);
+  }
+
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: transparent; color: var(--mid);
+    padding: 14px 28px; border-radius: 6px;
+    border: 1px solid var(--border);
+    font-family: var(--mono); font-size: 14px;
+    text-decoration: none;
+    transition: border-color 0.2s, color 0.2s, transform 0.15s;
+  }
+  .btn-secondary:hover { border-color: var(--muted); color: var(--text); transform: translateY(-2px); }
+
+  .hero-note {
+    margin-top: 20px;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    animation: fadeup 0.6s 0.4s ease both;
+  }
+
+  @keyframes fadeup {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── EQUATION ── */
+  .equation-section {
+    padding: 80px 24px;
+    display: flex; justify-content: center;
+  }
+
+  .equation {
+    display: flex; align-items: center; gap: 0;
+    flex-wrap: wrap; justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 700px; width: 100%;
+  }
+
+  .eq-part {
+    flex: 1; min-width: 160px;
+    padding: 32px 24px; text-align: center;
+    background: var(--card);
+    border-right: 1px solid var(--border);
+  }
+  .eq-part:last-child { border-right: none; }
+
+  .eq-icon {
+    font-family: var(--mono); font-size: 28px;
+    color: var(--orange); margin-bottom: 10px;
+  }
+
+  .eq-label {
+    font-size: 13px; font-weight: 700; color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .eq-desc {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+  }
+
+  .eq-op {
+    padding: 0 20px;
+    font-family: var(--mono); font-size: 24px; color: var(--muted);
+    background: var(--bg2);
+    display: flex; align-items: center;
+  }
+
+  .eq-result .eq-icon { color: var(--green); }
+
+  /* ── HOW IT WORKS ── */
+  .how-section {
+    padding: 80px 24px;
+    max-width: 1000px; margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--orange); letter-spacing: 0.15em; text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-size: clamp(28px, 4vw, 42px);
+    font-weight: 800; line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 56px;
+  }
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .step {
+    background: var(--card);
+    padding: 32px 28px;
+    position: relative;
+    transition: background 0.2s;
+  }
+  .step:hover { background: var(--bg3); }
+
+  .step-num {
+    font-family: var(--mono); font-size: 11px;
+    color: var(--orangedim); margin-bottom: 20px;
+  }
+
+  .step-title {
+    font-size: 16px; font-weight: 700;
+    margin-bottom: 10px; color: var(--text);
+  }
+
+  .step-body {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--muted); line-height: 1.7;
+  }
+
+  .step-accent {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px; background: var(--border);
+    transition: background 0.2s;
+  }
+  .step:hover .step-accent { background: var(--orange); }
+
+  /* ── SECURITY TABLE ── */
+  .security-section {
+    padding: 80px 24px;
+    max-width: 1000px; margin: 0 auto;
+  }
+
+  .threat-table {
+    width: 100%; border-collapse: collapse;
+    font-family: var(--mono); font-size: 13px;
+    border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .threat-table th {
+    background: var(--bg3); color: var(--muted);
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
+    padding: 14px 20px; text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .threat-table td {
+    padding: 16px 20px; color: var(--mid);
+    border-bottom: 1px solid var(--border);
+  }
+  .threat-table tr:last-child td { border-bottom: none; }
+  .threat-table tr:hover td { background: var(--bg3); }
+
+  .badge-safe { color: var(--green); font-weight: 600; }
+  .badge-warn { color: #ffa500; font-weight: 600; }
+  .badge-no   { color: #f44; font-weight: 600; }
+
+  /* ── FEATURES ── */
+  .features-section {
+    padding: 80px 24px;
+    max-width: 1000px; margin: 0 auto;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+
+  .feature-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 28px 24px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .feature-card:hover { border-color: var(--orangedim); transform: translateY(-3px); }
+
+  .feature-icon {
+    font-size: 22px; margin-bottom: 14px;
+  }
+
+  .feature-title {
+    font-size: 14px; font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .feature-body {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--muted); line-height: 1.6;
+  }
+
+  /* ── CTA ── */
+  .cta-section {
+    padding: 100px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cta-section::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(255,69,0,0.06), transparent);
+  }
+
+  .cta-section h2 {
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 800; letter-spacing: -0.02em;
+    margin-bottom: 16px; position: relative;
+  }
+
+  .cta-section p {
+    font-family: var(--mono); font-size: 14px;
+    color: var(--muted); margin-bottom: 40px; position: relative;
+  }
+
+  /* ── WARNING STRIP ── */
+  .warning-strip {
+    background: #1a0900;
+    border-top: 1px solid var(--orangedim);
+    border-bottom: 1px solid var(--orangedim);
+    padding: 14px 24px;
+    text-align: center;
+    font-family: var(--mono); font-size: 12px;
+    color: #ff6534;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    padding: 40px 40px;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px;
+  }
+
+  footer .foot-logo {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 800; font-size: 15px; color: var(--muted);
+  }
+
+  footer .foot-links {
+    display: flex; gap: 24px;
+  }
+  footer .foot-links a {
+    font-family: var(--mono); font-size: 12px;
+    color: var(--muted); text-decoration: none;
+    transition: color 0.2s;
+  }
+  footer .foot-links a:hover { color: var(--text); }
+
+  footer .foot-note {
+    font-family: var(--mono); font-size: 11px;
+    color: #444;
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px; background: var(--border);
+    max-width: 1000px; margin: 0 auto;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    nav { padding: 0 20px; }
+    .nav-links { display: none; }
+    .eq-op { display: none; }
+    footer { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#">
+    <span class="nav-logo-dot"></span>
+    SeedRunner
+  </a>
+  <div class="nav-links">
+    <a href="#how">How it works</a>
+    <a href="#security">Security</a>
+    <a href="#download">Download</a>
+    <a href="https://github.com/YOURUSERNAME/seedrunner" target="_blank">GitHub ↗</a>
+  </div>
+  <a class="nav-cta" href="#download">Download free</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+
+  <div class="hero-badge">Open source · Free · No internet required</div>
+
+  <h1>Your seed.<br><span>Hidden in plain sight.</span></h1>
+
+  <p class="hero-sub">
+    Most seed backup methods store your words in some form.<br>
+    On paper, on metal, split across shares.<br>
+    The words themselves are always the weak point.<br>
+    Anyone who finds them can read your seed.<br><br>
+    <strong style="color: var(--orange); font-size: 1.1em;">SeedRunner takes a different approach.</strong>
+  </p>
+
+  <div class="hero-buttons">
+    <a class="btn-primary" href="#download">
+      ↓ Download for Windows
+    </a>
+    <a class="btn-secondary" href="https://github.com/YOURUSERNAME/seedrunner" target="_blank">
+      View source on GitHub
+    </a>
+  </div>
+
+  <p class="hero-note">Python 3.8+ · No external dependencies · MIT License</p>
+</section>
+
+<!-- EQUATION -->
+<section class="equation-section">
+  <div class="equation">
+    <div class="eq-part">
+      <div class="eq-icon">🧠</div>
+      <div class="eq-label">Your password</div>
+      <div class="eq-desc">stays in your head</div>
+    </div>
+    <div class="eq-op">+</div>
+    <div class="eq-part">
+      <div class="eq-icon">📄</div>
+      <div class="eq-label">Your numbers</div>
+      <div class="eq-desc">written on paper</div>
+    </div>
+    <div class="eq-op">=</div>
+    <div class="eq-part eq-result">
+      <div class="eq-icon">✓</div>
+      <div class="eq-label">Full seed recovery</div>
+      <div class="eq-desc">every single time</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- EXPLANATION -->
+<section style="padding: 80px 24px; max-width: 700px; margin: 0 auto; text-align: center;">
+  <p class="section-label">The idea</p>
+  <p style="font-size: clamp(18px, 2.5vw, 26px); font-weight: 800; line-height: 1.3; letter-spacing: -0.02em; margin-bottom: 28px;">
+    You choose a password.<br>SeedRunner shuffles the entire BIP-39 list using its SHA-256 hash — assigning every one of the 2048 words a unique number.
+  </p>
+  <p style="font-family: var(--mono); font-size: 14px; color: var(--mid); line-height: 1.8;">
+    Write those numbers on paper. Without your password, they are meaningless.<br>
+    Re-enter the same password and the same mapping reappears — every time, on any machine.
+  </p>
+</section>
+
+<div class="divider"></div>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how">
+  <p class="section-label">How it works</p>
+  <h2 class="section-title">Three steps to hide your seed.</h2>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-accent"></div>
+      <div class="step-num">01</div>
+      <div class="step-title">Pick a password</div>
+      <div class="step-body">Any phrase you'll remember. This is your key — never write it down.</div>
+    </div>
+    <div class="step">
+      <div class="step-accent"></div>
+      <div class="step-num">02</div>
+      <div class="step-title">SHA-256 shuffles the list</div>
+      <div class="step-body">Your password is hashed. That hash assigns every BIP-39 word a unique number from 1–2048.</div>
+    </div>
+    <div class="step">
+      <div class="step-accent"></div>
+      <div class="step-num">03</div>
+      <div class="step-title">Write down your numbers</div>
+      <div class="step-body">Look up each word of your seed and note its number. Tuck the paper away safely.</div>
+    </div>
+    <div class="step">
+      <div class="step-accent"></div>
+      <div class="step-num">04</div>
+      <div class="step-title">Recover anytime</div>
+      <div class="step-body">Re-enter your password → same mapping appears → look up your numbers → seed restored.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- SECURITY -->
+<section class="security-section" id="security">
+  <p class="section-label">Security model</p>
+  <h2 class="section-title">What it protects against.</h2>
+
+  <table class="threat-table">
+    <thead>
+      <tr>
+        <th>Threat</th>
+        <th>Protected?</th>
+        <th>Why</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Someone finds your paper</td>
+        <td><span class="badge-safe">✓ Yes</span></td>
+        <td>Numbers are meaningless without your password</td>
+      </tr>
+      <tr>
+        <td>Someone knows your password</td>
+        <td><span class="badge-safe">✓ Yes</span></td>
+        <td>Useless without the physical list of numbers</td>
+      </tr>
+      <tr>
+        <td>Someone has both paper and password</td>
+        <td><span class="badge-no">✗ No</span></td>
+        <td>Seed is fully recoverable — protect both separately</td>
+      </tr>
+      <tr>
+        <td>Malware on your machine</td>
+        <td><span class="badge-warn">⚠ Partial</span></td>
+        <td>Run only on a trusted, air-gapped device</td>
+      </tr>
+      <tr>
+        <td>SeedRunner itself is malicious</td>
+        <td><span class="badge-safe">✓ Auditable</span></td>
+        <td>Fully open source — read every line before running</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top: 20px; font-family: var(--mono); font-size: 12px; color: var(--muted);">
+    SeedRunner is an obfuscation layer — not a replacement for your primary seed backup. Always keep a secure copy of your actual words.
+  </p>
+</section>
+
+<div class="divider"></div>
+
+<!-- FEATURES -->
+<section class="features-section">
+  <p class="section-label">Features</p>
+  <h2 class="section-title">Built for paranoid people.</h2>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🔒</div>
+      <div class="feature-title">RAM only</div>
+      <div class="feature-body">Nothing is ever written to disk. Close the window and it's gone.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔄</div>
+      <div class="feature-title">Auto-rotating pages</div>
+      <div class="feature-body">The list cycles every 15 seconds to defeat screen recording.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">#</div>
+      <div class="feature-title">Deterministic</div>
+      <div class="feature-body">Same password = same numbers. Every time. On any machine.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔍</div>
+      <div class="feature-title">Sort by word or number</div>
+      <div class="feature-body">Find entries instantly whether you're encoding or recovering.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📦</div>
+      <div class="feature-title">Zero dependencies</div>
+      <div class="feature-body">Python standard library only. No pip, no packages, no surprises.</div>
+    </div>
+    <div class="feature-card" style="border-color: var(--orangedim);">
+      <div class="feature-icon">🖥️</div>
+      <div class="feature-title">Full list, always visible</div>
+      <div class="feature-body">All 2048 BIP-39 words are displayed at once with their numbers. No search, no input — just the complete shuffled list in front of you.</div>
+    </div>
+    <div class="feature-card" style="border-color: var(--orangedim);">
+      <div class="feature-icon">🖱️</div>
+      <div class="feature-title">Cursor disabled</div>
+      <div class="feature-body">The mouse cursor is hidden during display. No clicking, no copying, no selecting — the list is read-only by design.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Open source</div>
+      <div class="feature-body">Read the code. Audit it. Trust nothing you can't verify.</div>
+    </div>
+  </div>
+</section>
+
+<!-- WARNING STRIP -->
+<div class="warning-strip">
+  ⚠ SeedRunner only displays the numbered BIP-39 list — never enter your actual seed words into it.
+</div>
+
+
+<!-- DONATE -->
+<section style="padding: 60px 24px; max-width: 1000px; margin: 0 auto;" id="donate">
+  <p class="section-label">Support the project</p>
+  <h2 class="section-title" style="margin-bottom: 32px;">Buy me a coffee ⚡</h2>
+  <div style="display: flex; gap: 32px; flex-wrap: wrap; justify-content: center;">
+
+    <div style="background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 32px 28px; text-align: center; flex: 1; min-width: 220px; max-width: 280px; transition: border-color 0.2s;" onmouseover="this.style.borderColor='var(--orangedim)'" onmouseout="this.style.borderColor='var(--border)'">
+      <p style="font-family: var(--mono); font-size: 11px; color: var(--orange); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 16px;">⚡ Lightning</p>
+      <img src="lightning.png" alt="Lightning QR" style="width: 180px; height: 180px; border-radius: 8px; display: block; margin: 0 auto 16px;">
+      <p style="font-family: var(--mono); font-size: 11px; color: var(--muted);">Scan with any Lightning wallet</p>
+    </div>
+
+    <div style="background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 32px 28px; text-align: center; flex: 1; min-width: 220px; max-width: 280px; transition: border-color 0.2s;" onmouseover="this.style.borderColor='var(--orangedim)'" onmouseout="this.style.borderColor='var(--border)'">
+      <p style="font-family: var(--mono); font-size: 11px; color: var(--orange); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 16px;">₿ On-chain</p>
+      <img src="onchain.png" alt="Onchain QR" style="width: 180px; height: 180px; border-radius: 8px; display: block; margin: 0 auto 16px;">
+      <p style="font-family: var(--mono); font-size: 11px; color: var(--muted);">Scan with any Bitcoin wallet</p>
+    </div>
+
+  </div>
+  <p style="text-align: center; font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 24px;">
+    SeedRunner is free forever. If it helped you, a sat or two is always appreciated. 🙏
+  </p>
+</section>
+
+<div class="divider"></div>
+<!-- CTA -->
+<section class="cta-section" id="download">
+  <h2>Ready to secure your seed?</h2>
+  <p>Free, open source, and runs entirely offline.</p>
+  <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap; position:relative;">
+    <a class="btn-primary" href="https://github.com/YOURUSERNAME/seedrunner/releases/latest/download/seedrunner.pyw">
+      ↓ Download seedrunner.pyw
+    </a>
+    <a class="btn-secondary" href="https://github.com/YOURUSERNAME/seedrunner" target="_blank">
+      View on GitHub ↗
+    </a>
+  </div>
+  <p style="margin-top:20px; font-size:12px; color:var(--muted); position:relative;">
+    Requires Python 3.8+ · Windows · macOS · Linux
+  </p>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="foot-logo">
+    <span style="width:8px;height:8px;border-radius:50%;background:var(--orange);display:inline-block;"></span>
+    SeedRunner
+  </div>
+  <div class="foot-links">
+    <a href="https://github.com/YOURUSERNAME/seedrunner" target="_blank">GitHub</a>
+    <a href="https://github.com/YOURUSERNAME/seedrunner/blob/main/LICENSE" target="_blank">MIT License</a>
+    <a href="https://github.com/YOURUSERNAME/seedrunner/blob/main/README.md" target="_blank">Docs</a>
+  </div>
+  <div class="foot-note">Not financial advice. Use at your own risk.</div>
+</footer>
+
+</body>
+</html>
