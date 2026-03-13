@@ -594,8 +594,8 @@ class SeedRunnerApp:
         self.root = root
         root.title("SeedRunner")
         root.configure(bg=BG)
-        root.geometry("680x540")
-        root.minsize(600, 480)
+        root.geometry("680x620")
+        root.minsize(600, 580)
         self._center()
         self._build()
 
@@ -604,7 +604,7 @@ class SeedRunnerApp:
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = (sw - 680) // 2; y = (sh - 540) // 2
-        self.root.geometry(f"680x540+{x}+{y}")
+        self.root.geometry(f"680x620+{x}+{y}")
 
     def _show_donate(self):
         win = tk.Toplevel(self.root)
@@ -644,7 +644,7 @@ class SeedRunnerApp:
         }
         for key, label, color in [
             ("lightning", "⚡ Lightning", ORANGE),
-            ("onchain",   "₿ On-chain",  "#f7931a"),
+            ("onchain",   "₿ On-chain (Bitcoin)", "#f7931a"),
         ]:
             col = tk.Frame(qr_frame, bg=BG)
             col.pack(side="left", padx=20)
@@ -658,7 +658,8 @@ class SeedRunnerApp:
             lbl = tk.Label(col, image=photo, bg=BG)
             lbl.image = photo
             lbl.pack()
-            tk.Label(col, text="Scan with any\nBitcoin wallet", bg=BG, fg=TEXT_DIM,
+            wallet_hint = "Scan with any\nLightning wallet" if key == "lightning" else "Scan with any\nBitcoin wallet"
+            tk.Label(col, text=wallet_hint, bg=BG, fg=TEXT_DIM,
                      font=("Segoe UI", 9), justify="center").pack(pady=(8, 0))
 
         tk.Button(win, text="Close", bg=BG3, fg=TEXT_DIM,
@@ -678,7 +679,7 @@ class SeedRunnerApp:
                  font=("Segoe UI", 18, "bold")).pack(side="left", padx=(0,8))
         tk.Label(logo_frame, text="SeedRunner", bg=BG2, fg=TEXT,
                  font=("Segoe UI", 16, "bold")).pack(side="left")
-        tk.Label(logo_frame, text=" v2", bg=BG2, fg=TEXT_DIM,
+        tk.Label(logo_frame, text=" v1.0", bg=BG2, fg=TEXT_DIM,
                  font=("Segoe UI", 10)).pack(side="left", pady=(6,0))
 
         tk.Button(header, text="Quit", bg="#2a0000", fg="#f88",
@@ -693,6 +694,17 @@ class SeedRunnerApp:
 
         tk.Label(header, text="BIP-39 Word Shuffler", bg=BG2, fg=TEXT_DIM,
                  font=FONT_SMALL).pack(side="right", padx=8)
+
+        # ── FOOTER (before card so always visible)
+        import webbrowser
+        footer = tk.Frame(self.root, bg=BG2, height=40)
+        footer.pack(fill="x", side="bottom")
+        footer.pack_propagate(False)
+        tk.Button(footer, text="How it works →", bg=BG2, fg=ORANGE,
+                  font=("Segoe UI", 9, "bold"), relief="flat", bd=0,
+                  activebackground=BG2, activeforeground=ORANGE2,
+                  cursor="hand2",
+                  command=lambda: webbrowser.open("https://ysaak69.github.io/Seedrunner")).pack(side="right", padx=16, pady=10)
 
         # ── MAIN CARD
         card = tk.Frame(self.root, bg=CARD, bd=0)
@@ -739,6 +751,9 @@ class SeedRunnerApp:
                                        fg=TEXT_DIM, font=("Segoe UI", 8))
         self.strength_lbl.pack(anchor="e", pady=(2,0))
         self.pw_var.trace_add("write", self._update_strength)
+
+        tk.Label(inner, text="⚠  Never enter your seed phrase here — this tool only shows the numbered list",
+                 bg=CARD, fg="#ff2222", font=("Segoe UI", 9, "bold")).pack(anchor="w", pady=(0,4))
 
         make_separator(inner)
 
@@ -792,11 +807,7 @@ class SeedRunnerApp:
         )
         self.gen_btn.pack(fill="x")
 
-        # ── footer
-        footer = tk.Frame(self.root, bg=BG, height=28)
-        footer.pack(fill="x", side="bottom")
-        tk.Label(footer, text="This tool numbers the public BIP-39 list — never enter your actual seed phrase here",
-                 bg=BG, fg=ORANGE_DIM, font=("Segoe UI", 8)).pack(pady=6)
+
 
     def _radio_pill(self, parent, label, desc, var, val, wide=True):
         def select():
@@ -896,7 +907,7 @@ def boot():
             import tkinter.messagebox as mb
             mb.showerror("Startup Error", traceback.format_exc())
 
-    OnboardingWindow(root, on_done=launch)
+    launch()
     root.mainloop()
 
 if __name__ == "__main__":
