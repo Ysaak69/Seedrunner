@@ -1,6 +1,6 @@
 # SeedRunner
 
-**BIP-39 Shuffler.**
+**BIP-39 List Shuffler.**
 
 ## The idea
 
