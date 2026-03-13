@@ -1,6 +1,6 @@
 # SeedRunner
 
-**A 2-factor backup system for BIP-39 seed phrases.**
+**BIP-39 Shuffler.**
 
 ## The idea
 
